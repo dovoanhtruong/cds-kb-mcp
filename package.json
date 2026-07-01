@@ -14,10 +14,20 @@
   "engines": {
     "node": ">=18"
   },
-  "keywords": ["mcp", "sap", "s4hana", "cds", "knowledge-base", "ai-agent", "claude"],
+  "keywords": [
+    "mcp",
+    "sap",
+    "s4hana",
+    "cds",
+    "knowledge-base",
+    "ai-agent",
+    "claude"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^5.2.1",
     "minisearch": "^7.2.0",
+    "uuid": "^14.0.1",
     "zod": "^3.23.0"
   },
   "devDependencies": {

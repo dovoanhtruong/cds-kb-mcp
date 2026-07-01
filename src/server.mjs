@@ -12,6 +12,9 @@ import MiniSearch from 'minisearch';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { resolveDataSource, SECTION_NAMES } from './datasource.mjs';
 
 // ── Query-time ranking knobs (tunable independently of the index) ───────────
@@ -91,7 +94,7 @@ async function loadIndex() {
   taxonomyData = await ds.getTaxonomy();
 }
 
-// ── MCP Server ──────────────────────────────────────────────────────────────
+function createServer() {
 const server = new McpServer({ name: 'cds-knowledge-base', version: '1.2.0' });
 
 // ── Tool 1: search_cds ─────────────────────────────────────────────────────
@@ -270,11 +273,71 @@ server.registerTool(
   },
 );
 
+return server;
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 async function main() {
   await loadIndex();
-  await server.connect(new StdioServerTransport());
-  console.error(`[cds-kb-mcp] ready. ${ds.describe()} | views=${meta.viewCount} enriched=${meta.enrichedCount} modules=${Object.keys(moduleStats).length}`);
+  
+  const port = process.env.PORT;
+  const useSSE = process.env.USE_SSE === 'true' || !!port;
+
+  if (useSSE) {
+    const app = express();
+    const transports = new Map();
+    const apiKey = process.env.API_KEY;
+
+    // Optional API Key Auth
+    app.use((req, res, next) => {
+      if (!apiKey) return next();
+      const authHeader = req.headers.authorization;
+      if (!authHeader || authHeader !== `Bearer ${apiKey}`) {
+        return res.status(401).send('Unauthorized');
+      }
+      next();
+    });
+
+    app.get('/sse', async (req, res) => {
+      const transport = new SSEServerTransport('/messages', res);
+      const sessionId = transport.sessionId;
+      transports.set(sessionId, transport);
+      
+      res.on('close', () => {
+        console.error(`[cds-kb-mcp] SSE session ${sessionId} closed by client/network`);
+        transports.delete(sessionId);
+      });
+      
+      const server = createServer();
+      await server.connect(transport);
+    });
+
+    app.post('/messages', async (req, res) => {
+      const sessionId = req.query.sessionId;
+      const transport = transports.get(sessionId);
+      
+      if (!transport) {
+        return res.status(404).send('Session not found');
+      }
+      
+      await transport.handlePostMessage(req, res);
+    });
+
+    const serverPort = port || 8080;
+    app.listen(serverPort, () => {
+      console.error(`[cds-kb-mcp] HTTP SSE server ready on port ${serverPort}. ${ds.describe()} | views=${meta.viewCount} modules=${Object.keys(moduleStats).length}`);
+      if (apiKey) {
+        console.error(`[cds-kb-mcp] Authentication ENABLED (Bearer token required)`);
+      } else {
+        console.error(`[cds-kb-mcp] WARNING: No API_KEY provided. Server is public!`);
+      }
+    });
+  } else {
+    // Default local behavior
+    const server = createServer();
+    await server.connect(new StdioServerTransport());
+    console.error(`[cds-kb-mcp] Stdio server ready. ${ds.describe()} | views=${meta.viewCount} enriched=${meta.enrichedCount} modules=${Object.keys(moduleStats).length}`);
+  }
 }
 
 main().catch((e) => {

@@ -3,6 +3,8 @@
 A **dataless** MCP server that gives AI agents instant, ranked access to **7,355 SAP S/4HANA released CDS views** via semantic search, business taxonomy, and on-demand definition retrieval.
 
 > **TL;DR — fastest path:** install Node ≥ 18, point your MCP client at `node /path/to/cds-kb-mcp.mjs`, and you're done. No data download, no config. The server fetches what it needs from GitHub on first use, caches it, and revalidates in the background. See [Quick Start](#quick-start).
+> 
+> **Enterprise path:** Deploy the server to SAP BTP Cloud Foundry as an SSE endpoint, allowing your entire team to connect via a single `supergateway` config without running anything locally. See [Cloud Foundry Deployment](#cloud-foundry-deployment).
 
 **Benchmark vs. raw file access:** ~830× faster, ~94× cheaper in tokens, better top-3 relevance — full numbers in [BENCHMARK.md](./BENCHMARK.md).
 
@@ -15,6 +17,7 @@ A **dataless** MCP server that gives AI agents instant, ranked access to **7,355
 - [Installation](#installation)
 - [Running modes](#running-modes) — **online (recommended)** vs offline
 - [Client Registration](#client-registration) — Claude Code, Claude Desktop, Antigravity, generic
+- [Cloud Foundry Deployment (SSE)](#cloud-foundry-deployment) — run remotely, connect universally
 - [Tools Reference](#tools-reference)
 - [Configuration](#configuration) — env vars & flags
 - [Network Resilience](#network-resilience)
@@ -446,6 +449,53 @@ End-to-end latency from a data push to clients seeing the new data: **the time o
 3. **Online-first.** Cold-start cost is paid once per machine, then amortised across every session via ETag-validated cache. No clone step in the happy path.
 4. **No AI-context bloat.** All 5.7 MB of index lives inside the MCP process. The model only ever sees ranked, short text responses — typically 80–400 tokens per call.
 5. **Stdio transport.** The server speaks JSON-RPC over stdio. It runs anywhere Node ≥ 18 runs; no HTTP server, no port to expose, no auth to configure.
+
+---
+
+## Cloud Foundry Deployment
+
+You can deploy `cds-kb-mcp` to SAP BTP Cloud Foundry to act as a centralized, remote server for multiple clients without them needing to clone the repository.
+
+1. Add a `manifest.yml` to the root of the project:
+   ```yaml
+   ---
+   applications:
+     - name: cds-kb-mcp
+       memory: 512M
+       default-route: true
+       buildpacks:
+         - nodejs_buildpack
+       command: npm start
+       env:
+         USE_SSE: "true"
+         # API_KEY: "your-secret-key-here" # Uncomment to enable API Key authentication
+   ```
+2. Run `cf push` to deploy the server.
+3. The server will automatically start listening on HTTP for SSE connections at `/sse`.
+
+### Client Configuration (Universal Method)
+
+For **any IDE** that supports MCP via standard command (Cursor, Claude Desktop, Gemini IDE), use the `supergateway` package to securely bridge the remote SSE server back into local stdio.
+
+Add this block to your `mcpServers` configuration file (e.g., `claude_desktop_config.json` or `mcp_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "cds-cloud": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--sse",
+        "https://<YOUR_CF_APP_URL>/sse"
+      ]
+    }
+  }
+}
+```
+
+This ensures you have exactly **one configuration method** across all agents, without requiring users to manually create or host proxy scripts.
 
 ---
 
