@@ -123,6 +123,18 @@ Sau khi hoàn tất, lấy URL của app (VD: `https://my-custom-mcp.cfapps.ap21
 
 ---
 
+## Yêu Cầu Đối Với Thiết Bị Client
+
+Trước khi tiến hành cấu hình, hãy đảm bảo máy trạm cục bộ của bạn đáp ứng các điều kiện sau:
+
+1. **Node.js**: Máy phải được cài đặt **Node.js phiên bản tối thiểu v18 trở lên** (Kiểm tra bằng lệnh `node -v`).
+2. **Kết nối mạng**:
+   * Có quyền truy cập HTTPS ra ngoài đến endpoint BTP: `https://my-custom-mcp.cfapps.ap21.hana.ondemand.com`
+   * Có quyền kết nối tới `registry.npmjs.org` để tải gói `supergateway`. Nếu máy trạm nằm trong mạng nội bộ công ty (Corporate Firewall/VPN/Proxy) chặn tải npm, bạn **bắt buộc** phải sử dụng phương pháp cài đặt toàn cục (**Cách 2** dưới đây).
+3. **IDE Tương thích**: Cursor, Claude Desktop, VS Code (kèm extension MCP), Gemini IDE,...
+
+---
+
 ## Bước 3: Cấu Hình Cho Phía Client (Các IDE)
 
 Tại phía máy trạm (của bạn hoặc người dùng khác), **không cần cài đặt clone repo**. Để đảm bảo **hoạt động ổn định 100% trên mọi thiết bị** (tránh lỗi xung đột phiên bản Node.js cũ v18/v20 hoặc lỗi kết nối mạng của `npx`), khuyến nghị cấu hình theo một trong hai cách dưới đây:

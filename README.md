@@ -31,6 +31,18 @@ A **dataless** MCP server that gives AI agents instant, ranked access to **7,355
 
 ---
 
+## Prerequisites
+
+Before configuring your client, ensure your local machine meets the following requirements:
+
+1. **Node.js**: Must be installed (minimum version **Node.js v18** or above). Verify by running `node -v` in your terminal.
+2. **Network Connectivity**:
+   - Outbound HTTPS access to the hosted server: `https://cds-kb-mcp.cfapps.ap21.hana.ondemand.com`
+   - Access to `registry.npmjs.org` to fetch `supergateway`. If your machine is behind a corporate firewall/VPN/proxy that blocks npm registry downloads, you **must** use the global installation method (**Option 2** below).
+3. **Compatible IDE**: An IDE supporting MCP (e.g. Cursor, Claude Desktop, VS Code, Gemini IDE).
+
+---
+
 ## Client Configuration
 
 Because the MCP server is hosted on SAP BTP Cloud Foundry, **you do not need to clone this repository or install any local dependencies**.
