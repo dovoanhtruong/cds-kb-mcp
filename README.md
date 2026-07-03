@@ -35,7 +35,13 @@ A **dataless** MCP server that gives AI agents instant, ranked access to **7,355
 
 Because the MCP server is hosted on SAP BTP Cloud Foundry, **you do not need to clone this repository or install any local dependencies**.
 
-For **any IDE** that supports MCP via standard command (Cursor, Claude Desktop, Gemini IDE), use the `supergateway` package to securely bridge the remote SSE server back into local stdio.
+For **any IDE** that supports MCP via standard commands (Cursor, Claude Desktop, Gemini IDE), use the `supergateway` package to securely bridge the remote SSE server back into local stdio.
+
+To ensure **100% stability across all devices** (preventing version mismatch or Node.js v18 compatibility issues), use one of the two configurations below:
+
+### Option 1: Lock Version with npx (Recommended & Easiest)
+
+Locks the `supergateway` version to `2.0.0`. This works on all devices with Node.js v18 or above, and prevents NPM from dynamically fetching the latest v3.x which requires Node v20+.
 
 Add this block to your `mcpServers` configuration file (e.g., `claude_desktop_config.json` or `mcp_config.json`):
 
@@ -46,7 +52,7 @@ Add this block to your `mcpServers` configuration file (e.g., `claude_desktop_co
       "command": "npx",
       "args": [
         "-y",
-        "supergateway",
+        "supergateway@2.0.0",
         "--sse",
         "https://cds-kb-mcp.cfapps.ap21.hana.ondemand.com/sse"
       ]
@@ -55,7 +61,30 @@ Add this block to your `mcpServers` configuration file (e.g., `claude_desktop_co
 }
 ```
 
-> **Note**: `npx -y supergateway` automatically downloads the proxy utility without any global installation.
+### Option 2: Global Installation (Offline & Network-Resilient)
+
+Best for enterprise environments behind corporate firewalls, VPNs, or proxy servers where running `npx` dynamically on every IDE startup might fail or time out.
+
+1. Install `supergateway` globally on your machine once:
+   ```bash
+   npm install -g supergateway@2.0.0
+   ```
+
+2. Update your IDE's `mcpServers` configuration to use the globally installed tool directly:
+   ```json
+   {
+     "mcpServers": {
+       "cds-kb": {
+         "command": "supergateway",
+         "args": [
+           "--sse",
+           "https://cds-kb-mcp.cfapps.ap21.hana.ondemand.com/sse"
+         ]
+       }
+     }
+   }
+   ```
+   *(Note for Windows users: If your IDE cannot locate the global command, use `supergateway.cmd` as the command, or specify the absolute path to your global `npm` prefix).*
 
 Once configured, restart your IDE. The tools will immediately be available for your agent to use.
 
